@@ -1,0 +1,25 @@
+# --- Core AI & Multi-Agent Framework ---
+pyowm
+langchain
+langgraph
+langchain_classic
+langchain-openai
+langchain_core
+langchain-community
+langchain-huggingface
+
+# --- Vision & External Tools ---
+tavily-python
+pillow
+
+# --- Vector Database & RAG ---
+chromadb
+langchain-chroma
+sentence-transformers
+
+# --- Frontend Web Application ---
+streamlit
+
+# --- Utilities & Data Management ---
+pydantic
+python-dotenv

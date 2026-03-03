@@ -1,0 +1,17 @@
+# Environments
+venv/
+env/
+.env
+
+# Python Caches (ไฟล์ขยะที่ Python สร้างขึ้นตอนรันโค้ด)
+__pycache__/
+*.pyc
+*.pyo
+
+# Database (ไม่ควรเอา Vector DB ขึ้น Git เพราะไฟล์มักจะใหญ่)
+chroma_db/
+*.db
+*.sqlite3
+
+# OS Files
+.DS_Store
