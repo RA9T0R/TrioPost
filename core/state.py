@@ -4,6 +4,7 @@ class TrioPostState(TypedDict):
     # 1. Input
     image_path: str
     user_prompt: str
+    store_name: str
 
     # 2. Vision Agent
     vision_detail: Optional[str]
