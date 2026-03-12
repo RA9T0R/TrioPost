@@ -9,9 +9,9 @@ __pycache__/
 *.pyo
 
 # Database (ไม่ควรเอา Vector DB ขึ้น Git เพราะไฟล์มักจะใหญ่)
-chroma_db/
-*.db
-*.sqlite3
+#chroma_db/
+#*.db
+#*.sqlite3
 
 # OS Files
 .DS_Store
