@@ -56,7 +56,7 @@ with t1:
         - **Typhoon v2.5** (LLM)
         - **Typhoon OCR** (Vision)
         - **Tavily API** (Web Search)
-        - **Sentence-Transformers**
+        - **Intfloat**
         """)
 
 with t2:

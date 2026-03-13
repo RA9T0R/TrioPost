@@ -18,7 +18,7 @@ st.divider()
 @st.cache_resource
 def get_embedding_model():
     print("📥 กำลังโหลด Embedding Model เข้าสู่ระบบ (โหลดแค่ครั้งเดียว)...")
-    return HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+    return HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-small")
 
 def get_store_names():
     try:
