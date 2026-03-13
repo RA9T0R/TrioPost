@@ -1,9 +1,6 @@
 streamlit
 
-pyowm
-langchain
 langgraph
-langchain_classic
 langchain-openai
 langchain_core
 langchain-community
@@ -16,5 +13,4 @@ chromadb
 langchain-chroma
 sentence-transformers
 
-pydantic
 python-dotenv
