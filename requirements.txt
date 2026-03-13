@@ -1,3 +1,5 @@
+streamlit
+
 pyowm
 langchain
 langgraph
@@ -13,8 +15,6 @@ pillow
 chromadb
 langchain-chroma
 sentence-transformers
-
-streamlit
 
 pydantic
 python-dotenv

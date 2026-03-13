@@ -19,7 +19,7 @@ load_dotenv()
 @lru_cache(maxsize=1)
 def get_cached_embeddings():
     print("🧠 [System] โหลด Embedding Model เข้าสู่ RAG Node (โหลดครั้งเดียว)...")
-    return HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-small")
+    return HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 
 def encode_image(image_path):

@@ -18,7 +18,7 @@ st.divider()
 @st.cache_resource
 def get_embedding_model():
     print("📥 กำลังโหลด Embedding Model เข้าสู่ระบบ (โหลดแค่ครั้งเดียว)...")
-    return HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-small")
+    return HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 def get_store_names():
     try:
@@ -145,41 +145,3 @@ with col_output:
                     st.error(f"รายละเอียด: {e}")
         else:
             st.warning("⚠️ กรุณาอัปโหลดรูปภาพ หรือ เลือกรูปตัวอย่างก่อนครับ!")
-
-    if st.session_state.generated_caption:
-        st.success("✨ คอนเทนต์พร้อมใช้งาน!")
-        st.text_area("📋 แคปชั่นที่ได้ (คัดลอกไปใช้ได้เลย):", value=st.session_state.generated_caption, height=450)
-
-        st.markdown("---")
-        with st.expander("✏️ ไม่ถูกใจ? สั่ง AI แก้ไขแคปชั่นตรงนี้เลย (Rewrite)"):
-            feedback = st.text_input("💬 อยากให้แก้ตรงไหน? (เช่น ขอสั้นลงอีก, ตัดราคาออก, ขอตื่นเต้นกว่านี้)")
-
-            if st.button("🔄 สั่งแก้ข้อความ", use_container_width=True):
-                with st.spinner("🤖 กำลังปรับแก้ข้อความตามคำสั่ง..."):
-                    from langchain_openai import ChatOpenAI
-                    from langchain_core.prompts import ChatPromptTemplate
-
-                    rewrite_llm = ChatOpenAI(
-                        api_key=os.getenv("TYPHOON_API_KEY"),
-                        base_url="https://api.opentyphoon.ai/v1",
-                        model="typhoon-v2.5-30b-a3b-instruct",
-                        temperature=0.7,
-                        max_tokens=2048
-                    )
-
-                    rewrite_prompt = ChatPromptTemplate.from_messages([
-                        ("system",
-                         "คุณคือนักเขียน Copywriter หน้าที่ของคุณคือ 'ปรับแก้' ข้อความแคปชั่นเดิม ตามคำสั่งของลูกค้าให้ถูกต้อง และเป็นภาษาไทย"),
-                        ("user",
-                         "แคปชั่นเดิม:\n{old_caption}\n\nคำสั่งให้แก้ไข: {feedback}\n\nช่วยปรับแก้ข้อความให้หน่อยครับ")
-                    ])
-
-                    chain = rewrite_prompt | rewrite_llm
-                    new_result = chain.invoke({
-                        "old_caption": st.session_state.generated_caption,
-                        "feedback": feedback
-                    })
-
-                    st.session_state.generated_caption = new_result.content
-                    st.toast("✨ ปรับแก้ข้อความตามสั่งเรียบร้อย!", icon="🪄")
-                    st.rerun()

@@ -15,7 +15,7 @@ st.divider()
 @st.cache_resource
 def get_embedding_model():
     print("📥 [RAG Manager] กำลังโหลด Embedding Model (โหลดแค่ครั้งเดียว)...")
-    return HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-small")
+    return HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 def load_db():
     embeddings = get_embedding_model()
