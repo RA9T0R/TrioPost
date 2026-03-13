@@ -8,120 +8,178 @@ from core.workflow import build_workflow
 
 st.set_page_config(page_title="TrioPost Dashboard", layout="wide")
 
-st.title("🤖 TrioPost: AI Social Commerce Dashboard")
+with st.sidebar:
+    st.markdown("### 📃 TrioPost")
+    st.caption("AI Social Commerce Assistant")
+
+st.title("📃 TrioPost: AI Social Commerce Dashboard")
 st.divider()
 
-if "current_prompt" not in st.session_state:
-    st.session_state.current_prompt = "ขอแบบทางการหน่อย และขายราคา 990 บาทเท่านั้นนะ ห้ามตั้งราคาอื่น"
+@st.cache_resource
+def get_embedding_model():
+    print("📥 กำลังโหลด Embedding Model เข้าสู่ระบบ (โหลดแค่ครั้งเดียว)...")
+    return HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
-def set_prompt(text):
-    st.session_state.current_prompt = text
+def get_store_names():
+    try:
+        embeddings = get_embedding_model()
+        db = Chroma(persist_directory="./database/chroma_db", embedding_function=embeddings)
+        data = db.get()
+        if data['metadatas']:
+            return list(set([meta.get('store_name', 'ไม่ระบุ') for meta in data['metadatas']]))
+        return []
+    except:
+        return []
+
 
 col_input, col_output = st.columns([1, 1.5], gap="large")
 
 with col_input:
     st.subheader("📥 ข้อมูลสินค้า (User Input)")
 
-    tab_upload, tab_sample = st.tabs(["📸 อัปโหลดรูปเอง", "🎁 เลือกรูปตัวอย่าง"])
-    selected_image_path = None  # ตัวแปรเก็บพาทรูปที่จะส่งให้ AI
+    with st.container(border=True):
+        tab_upload, tab_sample = st.tabs(["📸 อัปโหลดรูปเอง", "🎁 เลือกรูปตัวอย่าง"])
+        selected_image_path = None
 
-    with tab_upload:
-        uploaded_file = st.file_uploader("อัปโหลดรูปภาพสินค้า (JPG/PNG)", type=["jpg", "jpeg", "png"])
-        if uploaded_file:
-            image = Image.open(uploaded_file)
-            st.image(image, width='content')
-            temp_path = "assets/temp_image.jpg"
-            os.makedirs("assets", exist_ok=True)
-            with open(temp_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            selected_image_path = temp_path
-
-    with tab_sample:
-        st.markdown("เลือกรูปตัวอย่างเพื่อทดสอบระบบอย่างรวดเร็ว:")
-        sample_choice = st.radio("รูปตัวอย่าง:", ["ไม่มี", "👕 เสื้อยืด (ทดสอบราคาตลาด)", "⌚ นาฬิกา (ทดสอบความหรูหรา)",
-                                                  "🪆 ตุ๊กตา (ทดสอบความน่ารัก)"], horizontal=True)
-
-        if sample_choice != "ไม่มี":
-            sample_map = {
-                "👕 เสื้อยืด (ทดสอบราคาตลาด)": "assets/test_image.jpg",  # รูปเดิมที่เราใช้เทสต์
-                "⌚ นาฬิกา (ทดสอบความหรูหรา)": "assets/sample_watch.jpg",
-                "🪆 ตุ๊กตา (ทดสอบความน่ารัก)": "assets/sample_doll.jpg"
-            }
-            selected_sample = sample_map[sample_choice]
-
-            if os.path.exists(selected_sample):
-                image = Image.open(selected_sample)
+        with tab_upload:
+            uploaded_file = st.file_uploader("อัปโหลดรูปภาพสินค้า (JPG/PNG)", type=["jpg", "jpeg", "png"])
+            if uploaded_file:
+                image = Image.open(uploaded_file)
                 st.image(image, width='content')
-                selected_image_path = selected_sample
-            else:
-                st.warning(f"⚠️ ไม่พบไฟล์ `{selected_sample}` (อย่าลืมเอารูปไปใส่ในโฟลเดอร์ assets ก่อนทดสอบนะครับ!)")
+                temp_path = "assets/temp_image.jpg"
+                os.makedirs("assets", exist_ok=True)
+                with open(temp_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                selected_image_path = temp_path
 
-    st.divider()
-    st.markdown("**🏬 1. เลือกร้านค้าของคุณ (RAG Style):**")
+        with tab_sample:
+            sample_choice = st.radio("รูปตัวอย่าง:",
+                                     ["ไม่มี", "👕 เสื้อยืด", "⌚ นาฬิกา",
+                                      "🪆 ตุ๊กตา"], horizontal=True)
 
+            if sample_choice != "ไม่มี":
+                sample_map = {
+                    "👕 เสื้อยืด": "assets/test_image.jpg",
+                    "⌚ นาฬิกา": "assets/sample_watch.jpg",
+                    "🪆 ตุ๊กตา": "assets/sample_doll.jpg"
+                }
+                selected_sample = sample_map[sample_choice]
 
-    @st.cache_resource
-    def get_embedding_model():
-        print("📥 กำลังโหลด Embedding Model เข้าสู่ระบบ (โหลดแค่ครั้งเดียว)...")
-        return HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+                if os.path.exists(selected_sample):
+                    image = Image.open(selected_sample)
+                    st.image(image, width='content')
+                    selected_image_path = selected_sample
+                else:
+                    st.warning(f"⚠️ ไม่พบไฟล์ `{selected_sample}`")
 
+    with st.container(border=True):
+        st.markdown("**🏷️ 1.ข้อมูลสินค้า :**")
+        product_name = st.text_input("ชื่อแบรนด์/รุ่นสินค้า",
+                                     placeholder="เช่น นาฬิกา Rolex Air-King (ถ้าไม่ระบุ AI จะเดาจากภาพ)",
+                                     label_visibility="collapsed")
 
-    def get_store_names():
-        try:
-            # เรียกใช้โมเดลที่โหลดเตรียมไว้แล้ว (ใช้เวลา 0.001 วินาที)
-            embeddings = get_embedding_model()
-            db = Chroma(persist_directory="./database/chroma_db", embedding_function=embeddings)
-            data = db.get()
-            if data['metadatas']:
-                return list(set([meta.get('store_name', 'ไม่ระบุ') for meta in data['metadatas']]))
-            return []
-        except:
-            return []
+    with st.container(border=True):
+        st.markdown("**🏬 2.เลือกร้านค้าของคุณ (RAG Style):**")
+        available_stores = get_store_names()
+        if available_stores:
+            selected_store = st.selectbox("เลือกแบรนด์ที่ต้องการสวมบทบาท:", available_stores,
+                                          label_visibility="collapsed")
+        else:
+            st.info("⚠️ ยังไม่มีข้อมูลร้านค้าในระบบ")
+            selected_store = "ไม่มีข้อมูล"
 
+    with st.container(border=True):
+        st.markdown("**✍️ 3.คำสั่งพิเศษ :**")
+        user_prompt = st.text_area("ระบุราคา หรือจุดเด่น", value="ราคา 550,000 บาทถ้วน ห้ามพิมพ์ราคาอื่น", height=100,
+                                   label_visibility="collapsed")
 
-    available_stores = get_store_names()
-
-    if available_stores:
-        selected_store = st.selectbox("เลือกแบรนด์ที่ต้องการสวมบทบาท:", available_stores)
-    else:
-        st.info("⚠️ ยังไม่มีข้อมูลร้านค้าในระบบ")
-        selected_store = "ไม่มีข้อมูล"
-
-    st.markdown("**✍️ 2. คำสั่งพิเศษ (Highest Priority):**")
-    user_prompt = st.text_area(
-        "ระบุราคา โปรโมชั่น หรือจุดเด่นที่ต้องการบังคับให้ AI เขียน",
-        value="ราคา 550,000 บาทถ้วน ห้ามพิมพ์ราคาอื่น",
-        height=100
-    )
+    with st.container(border=True):
+        st.markdown("**📱 4.เลือกแพลตฟอร์มปลายทาง :**")
+        selected_platform = st.radio("แพลตฟอร์ม:",
+                                     ["Facebook (จัดเต็ม)", "Instagram (เน้นแฮชแท็ก)", "X / Twitter (สั้นกระชับ)"],
+                                     horizontal=True, label_visibility="collapsed")
 
     btn_generate = st.button("🚀 เริ่มต้นสร้างคอนเทนต์", use_container_width=True, type="primary")
 
 with col_output:
     st.subheader("✨ ผลลัพธ์จาก AI (AI Content)")
 
+    if "generated_caption" not in st.session_state:
+        st.session_state.generated_caption = ""
+
     if btn_generate:
         if selected_image_path is not None:
-            with st.spinner("🤖 Agents กำลังทำงานร่วมกัน..."):
+            with st.status("🤖 ทีม Agents กำลังระดมสมอง...", expanded=True) as status:
                 try:
+                    st.write("🏃‍♂️ กำลังดำเนินการ (LangGraph Workflow)...")
                     app = build_workflow()
 
                     final_result = app.invoke({
                         "image_path": selected_image_path,
                         "user_prompt": user_prompt,
-                        "store_name": selected_store
+                        "store_name": selected_store,
+                        "platform": selected_platform,
+                        "product_name": product_name
                     })
 
-                    st.success("✨ สร้างแคปชั่นสำเร็จ!")
-                    st.text_area("📋 แคปชั่นที่ได้ (คัดลอกไปใช้ได้เลย):", value=final_result["final_post"], height=500)
+                    st.session_state.generated_caption = final_result["final_post"]
 
-                    with st.expander("🔍 ดูขั้นตอนการวิเคราะห์ของ Agents"):
-                        st.info(f"👁️ Vision Agent: {final_result.get('vision_detail')}")
-                        st.warning(f"🔍 Research Data: {final_result.get('market_price')}")
-                        st.success(f"🧠 RAG Context: {final_result.get('rag_context')}")
+                    st.divider()
+                    st.markdown("### 🕵️‍♂️ เบื้องหลังการทำงานของทีม Agents")
+
+                    st.markdown("**👁️ 1. Vision Agent (สิ่งที่ AI มองเห็น):**")
+                    st.info(final_result.get('vision_detail', 'ไม่มีข้อมูล'))
+
+                    st.markdown("**🔍 2. Researcher Agent (ข้อมูลจากอินเทอร์เน็ต):**")
+                    with st.container(height=150, border=True):
+                        st.markdown(final_result.get('research_data', 'ไม่มีข้อมูล'))
+
+                    st.markdown(f"**🧠 3. RAG Node (คู่มือแบรนด์: {selected_store}):**")
+                    st.success(final_result.get('rag_context', 'ไม่มีข้อมูล'))
+
+                    status.update(label="✨ สร้างแคปชั่นเสร็จสมบูรณ์! (คลิกเพื่อดูเบื้องหลังการคิดของ AI)",
+                                  state="complete", expanded=False)
 
                 except Exception as e:
-                    st.error(f"❌ เกิดข้อผิดพลาด: {e}")
+                    status.update(label="❌ เกิดข้อผิดพลาด", state="error", expanded=True)
+                    st.error(f"รายละเอียด: {e}")
         else:
             st.warning("⚠️ กรุณาอัปโหลดรูปภาพ หรือ เลือกรูปตัวอย่างก่อนครับ!")
-    else:
-        st.info("👈 กรอกข้อมูลทางด้านซ้ายแล้วกดปุ่มเพื่อดูผลลัพธ์")
+
+    if st.session_state.generated_caption:
+        st.success("✨ คอนเทนต์พร้อมใช้งาน!")
+        st.text_area("📋 แคปชั่นที่ได้ (คัดลอกไปใช้ได้เลย):", value=st.session_state.generated_caption, height=450)
+
+        st.markdown("---")
+        with st.expander("✏️ ไม่ถูกใจ? สั่ง AI แก้ไขแคปชั่นตรงนี้เลย (Rewrite)"):
+            feedback = st.text_input("💬 อยากให้แก้ตรงไหน? (เช่น ขอสั้นลงอีก, ตัดราคาออก, ขอตื่นเต้นกว่านี้)")
+
+            if st.button("🔄 สั่งแก้ข้อความ", use_container_width=True):
+                with st.spinner("🤖 กำลังปรับแก้ข้อความตามคำสั่ง..."):
+                    from langchain_openai import ChatOpenAI
+                    from langchain_core.prompts import ChatPromptTemplate
+
+                    rewrite_llm = ChatOpenAI(
+                        api_key=os.getenv("TYPHOON_API_KEY"),
+                        base_url="https://api.opentyphoon.ai/v1",
+                        model="typhoon-v2.5-30b-a3b-instruct",
+                        temperature=0.7,
+                        max_tokens=2048
+                    )
+
+                    rewrite_prompt = ChatPromptTemplate.from_messages([
+                        ("system",
+                         "คุณคือนักเขียน Copywriter หน้าที่ของคุณคือ 'ปรับแก้' ข้อความแคปชั่นเดิม ตามคำสั่งของลูกค้าให้ถูกต้อง และเป็นภาษาไทย"),
+                        ("user",
+                         "แคปชั่นเดิม:\n{old_caption}\n\nคำสั่งให้แก้ไข: {feedback}\n\nช่วยปรับแก้ข้อความให้หน่อยครับ")
+                    ])
+
+                    chain = rewrite_prompt | rewrite_llm
+                    new_result = chain.invoke({
+                        "old_caption": st.session_state.generated_caption,
+                        "feedback": feedback
+                    })
+
+                    st.session_state.generated_caption = new_result.content
+                    st.toast("✨ ปรับแก้ข้อความตามสั่งเรียบร้อย!", icon="🪄")
+                    st.rerun()
