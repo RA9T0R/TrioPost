@@ -155,31 +155,51 @@ with col_output:
             feedback = st.text_input("💬 อยากให้แก้ตรงไหน? (เช่น ขอสั้นลงอีก, ตัดราคาออก, ขอตื่นเต้นกว่านี้)")
 
             if st.button("🔄 สั่งแก้ข้อความ", use_container_width=True):
-                with st.spinner("🤖 กำลังปรับแก้ข้อความตามคำสั่ง..."):
-                    from langchain_openai import ChatOpenAI
-                    from langchain_core.prompts import ChatPromptTemplate
+                from langchain_openai import ChatOpenAI
+                from langchain_core.prompts import ChatPromptTemplate
 
-                    rewrite_llm = ChatOpenAI(
-                        api_key=os.getenv("TYPHOON_API_KEY"),
-                        base_url="https://api.opentyphoon.ai/v1",
-                        model="typhoon-v2.5-30b-a3b-instruct",
-                        temperature=0.7,
-                        max_tokens=2048
-                    )
+                rewrite_llm = ChatOpenAI(
+                    api_key=os.getenv("TYPHOON_API_KEY"),
+                    base_url="https://api.opentyphoon.ai/v1",
+                    model="typhoon-v2.5-30b-a3b-instruct",
+                    temperature=0.7,
+                    max_tokens=4096
+                )
 
-                    rewrite_prompt = ChatPromptTemplate.from_messages([
+                with st.spinner("🧠 [Critic Agent] กำลังวิเคราะห์ข้อผิดพลาดและวางแผนการแก้ไข..."):
+                    critic_prompt = ChatPromptTemplate.from_messages([
                         ("system",
-                         "คุณคือนักเขียน Copywriter หน้าที่ของคุณคือ 'ปรับแก้' ข้อความแคปชั่นเดิม ตามคำสั่งของลูกค้าให้ถูกต้อง และเป็นภาษาไทย"),
+                         "คุณคือ Content Critic (นักวิจารณ์) หน้าที่ของคุณคือ 'วิเคราะห์' แคปชั่นเดิมเปรียบเทียบกับคำสั่งของลูกค้า "
+                         "แล้วเขียน 'แผนการแก้ไข (Revision Plan)' ออกมาเป็นข้อๆ ว่าต้องตัดอะไรออก เพิ่มอะไร หรือปรับโทนเสียงอย่างไร "
+                         "🚨 ตอบแค่แผนการแก้ไขเท่านั้น ห้ามเขียนแคปชั่นใหม่เด็ดขาด"),
                         ("user",
-                         "แคปชั่นเดิม:\n{old_caption}\n\nคำสั่งให้แก้ไข: {feedback}\n\nช่วยปรับแก้ข้อความให้หน่อยครับ")
+                         "แคปชั่นเดิม:\n{old_caption}\n\nคำสั่งของลูกค้า: {feedback}\n\nจงวิเคราะห์และวางแผนการแก้ไข:")
                     ])
 
-                    chain = rewrite_prompt | rewrite_llm
-                    new_result = chain.invoke({
+                    critic_chain = critic_prompt | rewrite_llm
+                    reflection_plan = critic_chain.invoke({
                         "old_caption": st.session_state.generated_caption,
                         "feedback": feedback
+                    }).content
+
+                    # แอบแสดงให้ User เห็นว่า AI คิดแผนอะไรอยู่ (โชว์ความโปร)
+                    st.info(f"**💭 แผนการแก้ไขของ AI (Reflection):**\n{reflection_plan}")
+
+                with st.spinner("✍️ [Writer Agent] กำลังลงมือเขียนแคปชั่นใหม่ตามแผน..."):
+                    writer_prompt = ChatPromptTemplate.from_messages([
+                        ("system",
+                         "คุณคือนักเขียน Copywriter หน้าที่ของคุณคือเขียนแคปชั่นใหม่ 'ตามแผนการแก้ไข' ที่ถูกวิเคราะห์ไว้แล้วอย่างเคร่งครัด\n"
+                         "🚨 กฎเหล็ก: ตอบมาเฉพาะเนื้อหาแคปชั่นที่แก้ไขเสร็จแล้วเท่านั้น ห้ามมีน้ำ ห้ามมีคำเกริ่นนำ"),
+                        ("user",
+                         "แคปชั่นเดิม:\n{old_caption}\n\nแผนการแก้ไขที่ต้องทำตาม:\n{reflection_plan}\n\nจงเขียนแคปชั่นใหม่:")
+                    ])
+
+                    writer_chain = writer_prompt | rewrite_llm
+                    new_result = writer_chain.invoke({
+                        "old_caption": st.session_state.generated_caption,
+                        "reflection_plan": reflection_plan
                     })
 
-                    st.session_state.generated_caption = new_result.content
-                    st.toast("✨ ปรับแก้ข้อความตามสั่งเรียบร้อย!", icon="🪄")
-                    st.rerun()
+                st.session_state.generated_caption = new_result.content
+                st.toast("✨ ปรับแก้ข้อความตามแผนเรียบร้อย!", icon="🪄")
+                st.rerun()
