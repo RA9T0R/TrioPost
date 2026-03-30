@@ -67,7 +67,7 @@ def build_vector_db():
         )
     ]
 
-    print("🧠 กำลังโหลด Embedding Model (อาจใช้เวลาสักครู่ในการโหลดครั้งแรก)...")
+    print("กำลังโหลด Embedding Model (อาจใช้เวลาสักครู่ในการโหลดครั้งแรก)...")
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     )
@@ -86,15 +86,7 @@ def build_vector_db():
         persist_directory=db_path
     )
 
-    print("✅ สร้าง Vector Database เสร็จสมบูรณ์แล้ว!")
-
-    print("\n🔍 ทดสอบการดึงข้อมูล (Retrieval Test):")
-    query = "ร้านที่ขายเครื่องประดับ สไตล์ทางการ"
-    results = vectorstore.similarity_search(query, k=1)
-
-    print(f"คำค้นหา: '{query}'")
-    print(f"ร้านที่ค้นพบ: {results[0].metadata['store_name']}")
-    print(f"ข้อมูลที่ดึงมาได้: \n{results[0].page_content}")
+    print("สร้าง Vector Database เสร็จสมบูรณ์แล้ว!")
 
 if __name__ == "__main__":
     build_vector_db()
