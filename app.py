@@ -182,7 +182,6 @@ with col_output:
                         "feedback": feedback
                     }).content
 
-                    # แอบแสดงให้ User เห็นว่า AI คิดแผนอะไรอยู่ (โชว์ความโปร)
                     st.info(f"**💭 แผนการแก้ไขของ AI (Reflection):**\n{reflection_plan}")
 
                 with st.spinner("✍️ [Writer Agent] กำลังลงมือเขียนแคปชั่นใหม่ตามแผน..."):

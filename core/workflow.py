@@ -15,10 +15,11 @@ from langchain_community.tools.tavily_search import TavilySearchResults
 
 load_dotenv()
 
+tavily_tool = TavilySearchResults(max_results=3)
 
 @lru_cache(maxsize=1)
 def get_cached_embeddings():
-    print("🧠 [System] โหลด Embedding Model เข้าสู่ RAG Node (โหลดครั้งเดียว)...")
+    print("[System] โหลด Embedding Model เข้าสู่ RAG Node...")
     return HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 
@@ -30,7 +31,7 @@ def vision_node(state: TrioPostState):
     image_path = state.get("image_path")
     product_name = state.get("product_name", "").strip()
 
-    print(f"👁️ [Vision Agent] กำลังวิเคราะห์รูปภาพจาก: {image_path}")
+    print(f"[Vision Agent] กำลังวิเคราะห์รูปภาพจาก: {image_path}")
 
     if product_name:
         instruction = f"รูปนี้คือ '{product_name}' จงอธิบายรูปลักษณ์ สี วัสดุ และความสวยงามของมันมาสั้นๆ ห้ามเดาชื่อแบรนด์อื่น ห้ามอ่านตัวเลขหน้าปัด"
@@ -63,24 +64,25 @@ def vision_node(state: TrioPostState):
         response = vision_llm.invoke([message])
         vision_detail = response.content
 
-        print("✅ วิเคราะห์ภาพสำเร็จ! สกัดจุดเด่นได้เรียบร้อย")
+        print("วิเคราะห์ภาพสำเร็จ! สกัดจุดเด่นได้เรียบร้อย")
         print(f"[สิ่งที่ AI เห็น]: {vision_detail[:100]}...")
 
     except Exception as e:
-        print(f"❌ เกิดข้อผิดพลาดในการวิเคราะห์ภาพ: {e}")
+        print(f"เกิดข้อผิดพลาดในการวิเคราะห์ภาพ: {e}")
         vision_detail = "สินค้าแฟชั่น (ข้อมูลภาพขัดข้อง)"
 
     return {"vision_detail": vision_detail}
+
 
 def researcher_node(state: TrioPostState):
     item_to_search = state.get("vision_detail", "สินค้าทั่วไป")
     product_name = state.get("product_name", "").strip()
 
-    print("🔍 [Researcher Agent] กำลังสกัดคีย์เวิร์ดเพื่อไปค้นหาข้อมูลเชิงลึก...")
+    print("[Researcher Agent] กำลังสกัดคีย์เวิร์ดเพื่อไปค้นหาข้อมูลเชิงลึก...")
 
     if product_name:
         short_keyword = product_name
-        print(f"🎯 ใช้คีย์เวิร์ดจากผู้ใช้โดยตรง: '{short_keyword}'")
+        print(f"ใช้คีย์เวิร์ดจากผู้ใช้โดยตรง: '{short_keyword}'")
     else:
         llm_for_search = ChatOpenAI(
             api_key=os.getenv("TYPHOON_API_KEY"),
@@ -107,6 +109,13 @@ def researcher_node(state: TrioPostState):
     print(f"-> นำไปค้นหา: '{search_query}'")
 
     try:
+        tavily_api_key = os.getenv("TAVILY_API_KEY")
+
+        if not tavily_api_key:
+            raise ValueError("ไม่พบ TAVILY_API_KEY ในระบบ กรุณาตรวจสอบไฟล์ .env")
+
+        os.environ["TAVILY_API_KEY"] = tavily_api_key
+
         tavily_tool = TavilySearchResults(max_results=3)
         search_results = tavily_tool.invoke(search_query)
 
@@ -118,17 +127,17 @@ def researcher_node(state: TrioPostState):
         if not market_data:
             market_data = "ไม่พบข้อมูลเชิงลึก แนะนำให้เน้นบรรยายจากรูปลักษณ์ที่เห็นในภาพ"
 
-        print("✅ ค้นหาข้อมูลตลาดและจุดเด่นสำเร็จ!")
+        print("ค้นหาข้อมูลตลาดและจุดเด่นสำเร็จ!")
 
     except Exception as e:
-        print(f"❌ เกิดข้อผิดพลาดในการดึงข้อมูล Tavily: {e}")
+        print(f"เกิดข้อผิดพลาดในการดึงข้อมูล Tavily: {e}")
         market_data = "ไม่สามารถเข้าถึงข้อมูลอินเทอร์เน็ตได้ ให้แต่งแคปชั่นโดยอิงจากภาพเป็นหลัก"
 
     return {"research_data": market_data}
 
 def rag_node(state: TrioPostState):
     store_name = state.get("store_name", "ไม่ระบุ")
-    print(f"🧠 [RAG Node] ดึงคู่มือแบรนด์เจาะจงเฉพาะร้าน: '{store_name}'")
+    print(f"[RAG Node] ดึงคู่มือแบรนด์เจาะจงเฉพาะร้าน: '{store_name}'")
 
     current_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(current_dir)
@@ -146,19 +155,19 @@ def rag_node(state: TrioPostState):
 
         if results:
             retrieved_style = results[0].page_content
-            print(f"   ✅ ดึงข้อมูลสำเร็จ! ได้คู่มือของร้าน: {store_name}")
+            print(f"ดึงข้อมูลสำเร็จ! ได้คู่มือของร้าน: {store_name}")
         else:
             retrieved_style = "ใช้สไตล์การเขียนขายของออนไลน์แบบมาตรฐาน เป็นกันเองและสุภาพ"
-            print(f"   ⚠️ ไม่พบข้อมูลของร้าน {store_name} ใช้สไตล์มาตรฐานแทน")
+            print(f"ไม่พบข้อมูลของร้าน {store_name} ใช้สไตล์มาตรฐานแทน")
 
     except Exception as e:
-        print(f"   ❌ เกิดข้อผิดพลาดในการโหลด RAG: {e}")
+        print(f"เกิดข้อผิดพลาดในการโหลด RAG: {e}")
         retrieved_style = "ใช้สไตล์การเขียนแบบมาตรฐาน เนื่องจากระบบขัดข้อง"
 
     return {"rag_context": retrieved_style}
 
 def copywriter_node(state: TrioPostState):
-    print(f"✍️ [Copywriter Agent] กำลังแต่งโพสต์ขายของด้วย Typhoon LLM...")
+    print(f"[Copywriter Agent] กำลังแต่งโพสต์ขายของด้วย Typhoon LLM...")
 
     detail = state.get("vision_detail", "ไม่มีข้อมูลสินค้า")
     research_data = state.get("research_data", "ไม่มีข้อมูลอ้างอิงหรือสเปค")
@@ -227,7 +236,7 @@ def copywriter_node(state: TrioPostState):
         "specific_platform_rule": specific_platform_rule
     })
 
-    print("✅ แต่งแคปชั่นเสร็จสมบูรณ์!")
+    print("แต่งแคปชั่นเสร็จสมบูรณ์!")
 
     return {"final_post": response.content}
 
@@ -257,7 +266,7 @@ if __name__ == "__main__":
         "image_path": "../assets/test_image.jpg",
         "user_prompt": "ขอแบบทางการหน่อย และขายราคา 990 บาทเท่านั้นนะ ห้ามตั้งราคาอื่น",
         "store_name": "LuxeAura",
-        "platform": "Facebook (จัดเต็ม)"  # 💡 ส่งลองแพลตฟอร์มด้วย
+        "platform": "Facebook (จัดเต็ม)"
     }
 
     final_result = app.invoke(initial_state)
